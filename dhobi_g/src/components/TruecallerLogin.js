@@ -34,28 +34,29 @@ export default function TruecallerLogin() {
 
   // Initialize Truecaller verification
   const initiateVerification = () => {
-    setLoading(true);
-    const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-    
-    // Android Intent URL
-    const intentUrl = `intent://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY}#Intent;package=com.truecaller;scheme=truecallersdk;end`;
-    
-    // Standard deep link
-    const deepLink = `truecallersdk://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY}`;
+  setLoading(true);
+  const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
-    // Try Android intent first
-    window.location.href = intentUrl;
-    
-    // Fallback to standard deep link
-    setTimeout(() => {
-      window.location.href = deepLink;
-    }, 200);
+  const partnerKey = process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY;
 
-    // Final fallback to Play Store after 1 second
-    setTimeout(() => {
-      window.location.href = 'https://play.google.com/store/apps/details?id=com.truecaller';
-    }, 1000);
-  };
+  const intentUrl = `intent://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${partnerKey}#Intent;package=com.truecaller;scheme=truecallersdk;end`;
+
+  const deepLink = `truecallersdk://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${partnerKey}`;
+
+  // Open intent first
+  window.location.href = intentUrl;
+
+  // Wait a bit longer before fallback (3s)
+  setTimeout(() => {
+    window.location.href = deepLink;
+  }, 1500);
+
+  // Only go to Play Store if app really not installed (5s delay)
+  setTimeout(() => {
+    window.location.href = 'https://play.google.com/store/apps/details?id=com.truecaller';
+  }, 7000);
+};
+
 
   // Handle callback from Truecaller
   useEffect(() => {
