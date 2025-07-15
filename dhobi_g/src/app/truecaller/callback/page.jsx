@@ -1,44 +1,63 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 
 export default function TruecallerCallback() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleMessage = (event) => {
-      // Truecaller SDK sends data from this origin
+    const handleMessage = async (event) => {
       if (event.origin !== "https://sdk.truecaller.com") return;
 
       try {
         const data = JSON.parse(event.data);
 
         if (data.requestPayload) {
-          // ✅ Save the payload for backend verification
-          localStorage.setItem("truecaller_payload", data.requestPayload);
+          toast.success("Truecaller verified, logging you in...");
 
-          toast.success("Truecaller verified successfully!");
-          // Redirect user after verification (maybe dashboard or login page)
-          router.push("/login");
+          // ✅ Send payload to backend for verification & login
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/truecaller/callback/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ requestPayload: data.requestPayload }),
+          });
+
+          if (!res.ok) throw new Error("Backend verification failed");
+
+          const result = await res.json();
+
+          // ✅ Save tokens
+          localStorage.setItem("access_token", result.access);
+          localStorage.setItem("refresh_token", result.refresh);
+          localStorage.setItem("user", JSON.stringify(result.user));
+
+          toast.success("✅ Logged in successfully!");
+          router.push("/dashboard");
         } else {
-          toast.error("Truecaller verification failed!");
+          toast.error("Truecaller returned no payload");
+          router.push("/login");
         }
       } catch (err) {
-        console.error("Error parsing Truecaller data", err);
-        toast.error("Invalid Truecaller response!");
+        console.error("Truecaller verification error:", err);
+        toast.error("Something went wrong");
+        router.push("/login");
+      } finally {
+        setLoading(false);
       }
     };
 
     window.addEventListener("message", handleMessage);
-
     return () => window.removeEventListener("message", handleMessage);
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <h2 className="text-xl font-semibold">Verifying with Truecaller...</h2>
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h2 className="text-xl font-semibold">
+        {loading ? "Verifying Truecaller..." : "Redirecting..."}
+      </h2>
     </div>
   );
 }

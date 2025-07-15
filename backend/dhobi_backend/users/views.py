@@ -123,48 +123,53 @@ class FirebaseLoginView(APIView):
 
 
 # truecaller view
-import jwt
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
-
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def truecaller_callback(request):
     try:
-        # Extract JWT payload (no signature verification needed)
+        # ✅ Get signed payload from frontend
         token = request.data.get('requestPayload')
         if not token:
-            return Response({'error': 'Missing token'}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({'error': 'Missing Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Decode Truecaller JWT payload (no signature verification for now)
         decoded = jwt.decode(token, options={"verify_signature": False})
-        
-        # Extract user data
-        phone = decoded.get('phoneNumber')
-        if not phone:
-            return Response({'error': 'Phone number missing'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get or create user
+
+        # ✅ Extract user details
+        phone_number = decoded.get('phoneNumber')
+        first_name = decoded.get('firstName') or decoded.get('name') or "User"
+        last_name = decoded.get('lastName', "")
+        email = decoded.get('email', f"{phone_number}@truecaller.com")
+
+        if not phone_number:
+            return Response({'error': 'Phone number missing from Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Find existing user OR create new one
         user, created = User.objects.get_or_create(
-            phone_number=phone,
+            phone_number=phone_number,
             defaults={
-                'username': phone,
-                'is_verified': True
+                'username': phone_number,   # use phone as username
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'is_truecaller_verified': True,  # mark verified
             }
         )
-        
-        # Generate JWT tokens
+
+        # If user already existed, update verification flag if needed
+        if not created:
+            if not user.is_truecaller_verified:
+                user.is_truecaller_verified = True
+                user.save()
+
+        # ✅ Issue JWT tokens
         refresh = RefreshToken.for_user(user)
+
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
-            'user': {
-                'id': user.id,
-                'phone_number': user.phone_number,
-                'is_verified': user.is_verified
-            }
+            'user': UserSerializer(user).data
         })
-        
+
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': f"Truecaller verification failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
