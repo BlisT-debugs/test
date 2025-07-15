@@ -22,7 +22,7 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/auth/login/", { 
+    const res = await fetch("https://dhobi-backend.onrender.com/api/auth/login/", { 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -56,7 +56,7 @@ const handleSubmit = async (e) => {
       const result = await signInWithPopup(auth, googleProvider);
       const token = await result.user.getIdToken();
       
-      const res = await fetch("http://127.0.0.1:8000/api/auth/firebase-auth/", {
+      const res = await fetch("https://dhobi-backend.onrender.com/api/auth/firebase-auth/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
