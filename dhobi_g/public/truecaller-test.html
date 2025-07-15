@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Truecaller Deep Link Test</title>
+</head>
+<body>
+  <h1>Truecaller Deep Link Test</h1>
+  <button id="openTruecaller">Open Truecaller</button>
+
+  <script>
+    document.getElementById("openTruecaller").addEventListener("click", () => {
+      const partnerKey = "pA3577c183fa88c4d4eed92b14ea418242a04"; // Replace with your real partner key
+      const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+
+      const intentUrl = `intent://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${partnerKey}#Intent;scheme=truecallersdk;package=com.truecaller;end`;
+      const deepLink = `truecallersdk://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${partnerKey}`;
+      const playStoreUrl = "https://play.google.com/store/apps/details?id=com.truecaller";
+
+      // Try opening Truecaller
+      window.location.href = intentUrl;
+
+      // Fallback after 2s
+      setTimeout(() => {
+        window.location.href = deepLink;
+      }, 2000);
+
+      // Final fallback to Play Store
+    });
+  </script>
+</body>
+</html>
