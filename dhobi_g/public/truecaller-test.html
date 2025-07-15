@@ -10,7 +10,7 @@
 
   <script>
     document.getElementById("openTruecaller").addEventListener("click", () => {
-      const partnerKey = "pA3577c183fa88c4d4eed92b14ea418242a04"; // Replace with your real partner key
+      const partnerKey = "sJ2p2e133a8b746e14eddbcb72d445ed501aa"; // Replace with your real partner key
       const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
       const intentUrl = `intent://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${partnerKey}#Intent;scheme=truecallersdk;package=com.truecaller;end`;

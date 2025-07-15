@@ -35,27 +35,33 @@ export default function TruecallerLogin() {
   // Initialize Truecaller verification
   const initiateVerification = () => {
   setLoading(true);
+
+  // Generate a random requestNonce (any unique string)
   const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
-  const partnerKey = process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY;
+  // ✅ Your callback URL (MUST match what you put in Truecaller dashboard)
+  const callbackUrl = "https://test-phi-pink-55.vercel.app/truecaller/callback";
 
-  const intentUrl = `intent://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${partnerKey}#Intent;package=com.truecaller;scheme=truecallersdk;end`;
+  // ✅ Construct Android Intent URL
+  const intentUrl = `intent://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY}&callbackUrl=${encodeURIComponent(callbackUrl)}#Intent;package=com.truecaller;scheme=truecallersdk;end`;
 
-  const deepLink = `truecallersdk://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${partnerKey}`;
+  // ✅ Construct deep link fallback
+  const deepLink = `truecallersdk://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
 
-  // Open intent first
+  // Try opening the Truecaller app via intent
   window.location.href = intentUrl;
 
-  // Wait a bit longer before fallback (3s)
+  // Fallback to deep link if intent fails
   setTimeout(() => {
     window.location.href = deepLink;
-  }, 1500);
+  }, 200);
 
-  // Only go to Play Store if app really not installed (5s delay)
+  // Final fallback → Play Store
   setTimeout(() => {
-    window.location.href = 'https://play.google.com/store/apps/details?id=com.truecaller';
-  }, 7000);
+    window.location.href = "https://play.google.com/store/apps/details?id=com.truecaller";
+  }, 1000);
 };
+
 
 
   // Handle callback from Truecaller
