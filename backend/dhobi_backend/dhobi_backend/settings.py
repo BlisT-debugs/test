@@ -21,16 +21,17 @@ from dotenv import load_dotenv, find_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Firebase configuration
-FIREBASE_ACCOUNT_KEY = os.path.join(BASE_DIR, 'dhobi-g-f97a0-firebase-adminsdk-fbsvc-c7d26c3971.json')
+FIREBASE_CRED_JSON = os.getenv("FIREBASE_SERVICE_ACCOUNT")
 
-try:
-    cred = credentials.Certificate(FIREBASE_ACCOUNT_KEY)
-    firebase_admin.initialize_app(cred)
-    print("Found Firebase account key")
-except FileNotFoundError:
-    print("Warning: Firebase service account key not found")
-except Exception as e:
-    print(f"Firebase initialization error: {str(e)}")
+if FIREBASE_CRED_JSON:
+    try:
+        cred = credentials.Certificate(eval(FIREBASE_CRED_JSON))  # Parse JSON string
+        firebase_admin.initialize_app(cred)
+        print("✅ Firebase initialized from environment")
+    except Exception as e:
+        print(f"❌ Firebase init error: {e}")
+else:
+    print("⚠️ No Firebase credentials found in environment!")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -43,7 +44,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 
@@ -66,15 +67,17 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
@@ -132,7 +135,8 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Media files
 MEDIA_URL = '/media/'
