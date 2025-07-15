@@ -63,7 +63,7 @@ export default function Home() {
     const fetchPartners = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:8000/api/website-content/"
+          "hhttps://dhobi-backend.onrender.com/api/website-content/"
         );
         const partnerSection = res.data.find(
           (section) => section.slug === "partner"
@@ -129,12 +129,15 @@ export default function Home() {
             {/* Buttons */}
             <div className="flex gap-4 mt-6 flex-wrap justify-center md:justify-start">
               <motion.button
-                onClick={() => router.push("/order")}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleBooking}
-                className="bg-[#007BB5] text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-[#005f91] transition duration-200"
-              >
+  onClick={() => {
+    router.push("/order");
+    handleBooking();
+  }}
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  className="bg-[#007BB5] text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-[#005f91] transition duration-200"
+>
+
                 Book Now
               </motion.button>
               <motion.button
