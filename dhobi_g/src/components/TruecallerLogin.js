@@ -96,7 +96,7 @@ export default function TruecallerLogin() {
     setTimeout(() => {
       window.location.href =
         "https://play.google.com/store/apps/details?id=com.truecaller";
-    }, 15000);
+    }, 600000);
   };
 
   // ✅ Listen for Truecaller callback message
