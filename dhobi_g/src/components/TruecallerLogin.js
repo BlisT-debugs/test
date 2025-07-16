@@ -40,7 +40,7 @@ export default function TruecallerLogin() {
     const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     const partnerKey = process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY;
     const partnerName = "dhobi"; 
-    const callbackUrl = "https://dhobi-backend.onrender.com/api/auth/truecaller/callback";
+    const callbackUrl = "https://dhobi-backend.onrender.com/api/auth/truecaller/callback/";
 
     // Truecaller UI customization
     const lang = "en";

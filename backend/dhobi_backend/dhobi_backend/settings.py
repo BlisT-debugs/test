@@ -155,6 +155,9 @@ REST_FRAMEWORK = {
     )
 }
 
+APPEND_SLASH = False
+
+
 
 # JWT settings
 SIMPLE_JWT = {
