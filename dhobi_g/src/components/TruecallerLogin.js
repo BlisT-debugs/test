@@ -40,7 +40,7 @@ export default function TruecallerLogin() {
 
     const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     const partnerKey = process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY;
-    const partnerName = "Dhobi Web"; // Name shown in Truecaller
+    const partnerName = "dhobi"; // Name shown in Truecaller
     const callbackUrl = "https://test-phi-pink-55.vercel.app/truecaller/callback";
 
     // ✅ Truecaller UI customization
