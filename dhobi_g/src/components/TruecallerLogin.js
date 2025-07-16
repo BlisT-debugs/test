@@ -85,11 +85,11 @@ export default function TruecallerLogin() {
       `#Intent;scheme=truecallersdk;package=com.truecaller;end`;
 
     // Try opening Truecaller via intent
-    window.location.href = intentUrl;
+window.open(intentUrl, "_blank");
 
     // Fallback to deep link after 1.5s if Chrome blocks intent
     setTimeout(() => {
-      window.location.href = deepLink;
+window.open(deepLink, "_blank");
     }, 1500);
 
     // Final fallback → Play Store after 4s
