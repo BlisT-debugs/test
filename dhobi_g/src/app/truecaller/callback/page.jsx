@@ -24,6 +24,8 @@ export default function TruecallerCallback() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ requestPayload: data.requestPayload }),
           });
+           const raw = await res.text(); // <-- log raw response
+           console.log("Backend raw response:", raw);
 
           if (!res.ok) throw new Error("Backend verification failed");
 

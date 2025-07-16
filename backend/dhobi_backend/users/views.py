@@ -132,15 +132,21 @@ from .models import User
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def truecaller_callback(request):
     try:
-        # Get signed payload from frontend
+        print("✅ Truecaller callback hit")
+        print("Request body:", request.data)
+
         token = request.data.get('requestPayload')
         if not token:
+            print("❌ Missing payload")
             return Response({'error': 'Missing Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Decode Truecaller JWT payload (no signature verification for now)
         decoded = jwt.decode(token, options={"verify_signature": False})
+        print("✅ Decoded payload:", decoded)
+
 
         # Extract user details
         phone_number = decoded.get('phoneNumber')

@@ -12,7 +12,7 @@ export default function TruecallerLogin() {
   const verifyWithBackend = async (requestPayload) => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/truecaller/callback/`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/callback/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestPayload }),
@@ -90,30 +90,35 @@ export default function TruecallerLogin() {
     setTimeout(() => {
       window.location.href =
         "https://play.google.com/store/apps/details?id=com.truecaller";
-    }, 600000);
+    }, 80000);
   };
 
   useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.origin !== "https://sdk.truecaller.com") return;
+  const handleMessage = (event) => {
+    console.log("✅ Truecaller postMessage event:", event);
 
-      try {
-        const data = JSON.parse(event.data);
-        if (data?.requestPayload) {
-          toast.success("Truecaller verified, logging you in...");
-          verifyWithBackend(data.requestPayload);
-        } else {
-          toast.error("No payload received from Truecaller");
-        }
-      } catch (err) {
-        console.error("Truecaller response parse error:", err);
-        toast.error("Invalid Truecaller response");
+    if (event.origin !== "https://sdk.truecaller.com") return;
+
+    try {
+      const data = JSON.parse(event.data);
+      console.log("✅ Parsed Truecaller data:", data);
+
+      if (data?.requestPayload) {
+        toast.success("Truecaller verified, logging you in...");
+        verifyWithBackend(data.requestPayload);
+      } else {
+        toast.error("No requestPayload received from Truecaller");
       }
-    };
+    } catch (err) {
+      console.error("❌ Truecaller response parse error:", err);
+      toast.error("Invalid Truecaller response");
+    }
+  };
 
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  window.addEventListener("message", handleMessage);
+  return () => window.removeEventListener("message", handleMessage);
+}, []);
+
 
   return (
     <button
