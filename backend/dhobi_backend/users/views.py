@@ -134,15 +134,15 @@ from .models import User
 @permission_classes([AllowAny])
 def truecaller_callback(request):
     try:
-        # ✅ Get signed payload from frontend
+        # Get signed payload from frontend
         token = request.data.get('requestPayload')
         if not token:
             return Response({'error': 'Missing Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ Decode Truecaller JWT payload (no signature verification for now)
+        # Decode Truecaller JWT payload (no signature verification for now)
         decoded = jwt.decode(token, options={"verify_signature": False})
 
-        # ✅ Extract user details
+        # Extract user details
         phone_number = decoded.get('phoneNumber')
         first_name = decoded.get('firstName') or decoded.get('name') or "User"
         last_name = decoded.get('lastName', "")
@@ -151,7 +151,7 @@ def truecaller_callback(request):
         if not phone_number:
             return Response({'error': 'Phone number missing from Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ✅ Find existing user OR create new one
+        # Find existing user OR create new one
         user, created = User.objects.get_or_create(
             phone_number=phone_number,
             defaults={

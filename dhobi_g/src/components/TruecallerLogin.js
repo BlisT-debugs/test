@@ -33,34 +33,67 @@ export default function TruecallerLogin() {
   };
 
   // Initialize Truecaller verification
-  const initiateVerification = () => {
+ const initiateVerification = () => {
   setLoading(true);
 
-  // Generate a random requestNonce (any unique string)
   const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
-  // ✅ Your callback URL (MUST match what you put in Truecaller dashboard)
+  const partnerKey = process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY;
+  const partnerName = "dhobi"; 
   const callbackUrl = "https://test-phi-pink-55.vercel.app/truecaller/callback";
 
-  // ✅ Construct Android Intent URL
-  const intentUrl = `intent://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY}&callbackUrl=${encodeURIComponent(callbackUrl)}#Intent;package=com.truecaller;scheme=truecallersdk;end`;
+  // ✅ Recommended parameters for customization
+  const lang = "en"; // or "en-US"
+  const privacyUrl = "https://test-phi-pink-55.vercel.app/privacy";
+  const termsUrl = "https://test-phi-pink-55.vercel.app/terms";
+  const loginPrefix = "continue"; // prefix before title
+  const loginSuffix = "login"; // suffix after title
+  const ctaPrefix = "continuewith"; // button prefix
+  const ctaColor = "%23f75d34"; // button color
+  const ctaTextColor = "%23f75d34"; // text color
+  const btnShape = "rect"; // square | rounded
+  const skipOption = "useanothermethod"; // footer text
+  const ttl = 60000; // time in ms before link expires (e.g., 60s)
 
-  // ✅ Construct deep link fallback
-  const deepLink = `truecallersdk://truesdk/web_verify?requestNonce=${requestNonce}&partnerKey=${process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  // ✅ Truecaller’s latest recommended deep link format
+  const deepLink = `truecallersdk://truesdk/web_verify?` +
+    `type=btmsheet` +
+    `&requestNonce=${requestNonce}` +
+    `&partnerKey=${partnerKey}` +
+    `&partnerName=${encodeURIComponent(partnerName)}` +
+    `&lang=${lang}` +
+    `&privacyUrl=${encodeURIComponent(privacyUrl)}` +
+    `&termsUrl=${encodeURIComponent(termsUrl)}` +
+    `&loginPrefix=${encodeURIComponent(loginPrefix)}` +
+    `&loginSuffix=${encodeURIComponent(loginSuffix)}` +
+    `&ctaPrefix=${encodeURIComponent(ctaPrefix)}` +
+    `&ctaColor=${encodeURIComponent(ctaColor)}` +
+    `&ctaTextColor=${encodeURIComponent(ctaTextColor)}` +
+    `&btnShape=${btnShape}` +
+    `&skipOption=${encodeURIComponent(skipOption)}` +
+    `&ttl=${ttl}` +
+    `&callbackUrl=${encodeURIComponent(callbackUrl)}`;
 
-  // Try opening the Truecaller app via intent
+  const intentUrl = `intent://truesdk/web_verify?` +
+    `requestNonce=${requestNonce}` +
+    `&partnerKey=${partnerKey}` +
+    `&callbackUrl=${encodeURIComponent(callbackUrl)}` +
+    `#Intent;scheme=truecallersdk;package=com.truecaller;end`;
+
+  // Try intent first
   window.location.href = intentUrl;
 
-  // Fallback to deep link if intent fails
+  // If Chrome blocks intent, fallback to deep link after 1s
   setTimeout(() => {
     window.location.href = deepLink;
-  }, 200);
+  }, 1000);
 
   // Final fallback → Play Store
   setTimeout(() => {
     window.location.href = "https://play.google.com/store/apps/details?id=com.truecaller";
-  }, 1000);
+  }, 5000);
 };
+
 
 
 
