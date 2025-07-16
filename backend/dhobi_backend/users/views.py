@@ -132,57 +132,56 @@ from .models import User
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@api_view(['POST'])
-@permission_classes([AllowAny])
 def truecaller_callback(request):
+    print("✅ Truecaller callback hit")
+    print("Request body:", request.data)
+
+    token = request.data.get('requestPayload')
+    if not token:
+        print("❌ Missing requestPayload")
+        return Response({'error': 'Missing Truecaller payload'}, status=400)
+
     try:
-        print("✅ Truecaller callback hit")
-        print("Request body:", request.data)
-
-        token = request.data.get('requestPayload')
-        if not token:
-            print("❌ Missing payload")
-            return Response({'error': 'Missing Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
-
         decoded = jwt.decode(token, options={"verify_signature": False})
         print("✅ Decoded payload:", decoded)
-
-
-        # Extract user details
-        phone_number = decoded.get('phoneNumber')
-        first_name = decoded.get('firstName') or decoded.get('name') or "User"
-        last_name = decoded.get('lastName', "")
-        email = decoded.get('email', f"{phone_number}@truecaller.com")
-
-        if not phone_number:
-            return Response({'error': 'Phone number missing from Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Find existing user OR create new one
-        user, created = User.objects.get_or_create(
-            phone_number=phone_number,
-            defaults={
-                'username': phone_number,   # use phone as username
-                'email': email,
-                'first_name': first_name,
-                'last_name': last_name,
-                'is_truecaller_verified': True,  # mark verified
-            }
-        )
-
-        # If user already existed, update verification flag if needed
-        if not created:
-            if not user.is_truecaller_verified:
-                user.is_truecaller_verified = True
-                user.save()
-
-        # ✅ Issue JWT tokens
-        refresh = RefreshToken.for_user(user)
-
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': UserSerializer(user).data
-        })
-
     except Exception as e:
-        return Response({'error': f"Truecaller verification failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        print("❌ JWT decode failed:", str(e))
+        return Response({'error': f'Invalid JWT: {str(e)}'}, status=400)
+
+
+
+    # Extract user details
+    phone_number = decoded.get('phoneNumber')
+    first_name = decoded.get('firstName') or decoded.get('name') or "User"
+    last_name = decoded.get('lastName', "")
+    email = decoded.get('email', f"{phone_number}@truecaller.com")
+
+    if not phone_number:
+        return Response({'error': 'Phone number missing from Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Find existing user OR create new one
+    user, created = User.objects.get_or_create(
+        phone_number=phone_number,
+        defaults={
+            'username': phone_number,   # use phone as username
+            'email': email,
+            'first_name': first_name,
+            'last_name': last_name,
+            'is_truecaller_verified': True,  # mark verified
+        }
+    )
+
+    # If user already existed, update verification flag if needed
+    if not created:
+        if not user.is_truecaller_verified:
+            user.is_truecaller_verified = True
+            user.save()
+
+    # ✅ Issue JWT tokens
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': UserSerializer(user).data
+    })
