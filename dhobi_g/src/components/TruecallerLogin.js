@@ -8,7 +8,7 @@ export default function TruecallerLogin() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // ✅ Send payload to backend & login
+  // Send payload to backend & login
   const verifyWithBackend = async (requestPayload) => {
     setLoading(true);
     try {
@@ -25,7 +25,7 @@ export default function TruecallerLogin() {
       localStorage.setItem("refresh_token", data.refresh);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      toast.success("✅ Logged in successfully!");
+      toast.success("Logged in successfully!");
       router.push("/");
     } catch (err) {
       toast.error(err.message || "Backend verification failed");
@@ -34,29 +34,27 @@ export default function TruecallerLogin() {
     }
   };
 
-  // ✅ Start Truecaller verification
   const initiateVerification = () => {
     setLoading(true);
 
     const requestNonce = `tc_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
     const partnerKey = process.env.NEXT_PUBLIC_TRUECALLER_APP_KEY;
-    const partnerName = "dhobi"; // Name shown in Truecaller
-    const callbackUrl = "https://test-phi-pink-55.vercel.app/truecaller/callback";
+    const partnerName = "dhobi"; 
+    const callbackUrl = "https://dhobi-backend.onrender.com/api/auth/truecaller/callback";
 
-    // ✅ Truecaller UI customization
+    // Truecaller UI customization
     const lang = "en";
     const privacyUrl = "https://test-phi-pink-55.vercel.app/privacy";
     const termsUrl = "https://test-phi-pink-55.vercel.app/terms";
     const loginPrefix = "Continue with";
     const loginSuffix = "Truecaller";
     const ctaPrefix = "Login with";
-    const ctaColor = "#f75d34"; // ✅ use normal HEX, will auto encode
+    const ctaColor = "#f75d34"; 
     const ctaTextColor = "#ffffff";
-    const btnShape = "rect"; // rect | rounded | round
+    const btnShape = "rect"; 
     const skipOption = "Use another method";
     const ttl = 60000; // 60s
 
-    // ✅ Truecaller deep link
     const deepLink =
       `truecallersdk://truesdk/web_verify?` +
       `type=btmsheet` +
@@ -76,7 +74,6 @@ export default function TruecallerLogin() {
       `&ttl=${ttl}` +
       `&callbackUrl=${encodeURIComponent(callbackUrl)}`;
 
-    // ✅ Intent fallback for Chrome
     const intentUrl =
       `intent://truesdk/web_verify?` +
       `requestNonce=${requestNonce}` +
@@ -84,22 +81,18 @@ export default function TruecallerLogin() {
       `&callbackUrl=${encodeURIComponent(callbackUrl)}` +
       `#Intent;scheme=truecallersdk;package=com.truecaller;end`;
 
-    // Try opening Truecaller via intent
     window.location.href = intentUrl;
 
-    // Fallback to deep link after 1.5s if Chrome blocks intent
     setTimeout(() => {
       window.location.href = deepLink;
     }, 1500);
 
-    // Final fallback → Play Store after 4s
     setTimeout(() => {
       window.location.href =
         "https://play.google.com/store/apps/details?id=com.truecaller";
     }, 600000);
   };
 
-  // ✅ Listen for Truecaller callback message
   useEffect(() => {
     const handleMessage = (event) => {
       if (event.origin !== "https://sdk.truecaller.com") return;

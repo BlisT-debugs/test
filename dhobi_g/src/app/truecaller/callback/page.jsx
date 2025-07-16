@@ -18,8 +18,8 @@ export default function TruecallerCallback() {
         if (data.requestPayload) {
           toast.success("Truecaller verified, logging you in...");
 
-          // ✅ Send payload to backend for verification & login
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/truecaller/callback/`, {
+          // Send payload to backend for verification & login
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/callback/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ requestPayload: data.requestPayload }),
@@ -29,12 +29,12 @@ export default function TruecallerCallback() {
 
           const result = await res.json();
 
-          // ✅ Save tokens
+          // Save tokens
           localStorage.setItem("access_token", result.access);
           localStorage.setItem("refresh_token", result.refresh);
           localStorage.setItem("user", JSON.stringify(result.user));
 
-          toast.success("✅ Logged in successfully!");
+          toast.success("Logged in successfully!");
           router.push("/dashboard");
         } else {
           toast.error("Truecaller returned no payload");
