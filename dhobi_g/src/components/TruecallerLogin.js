@@ -29,7 +29,7 @@ export default function TruecallerLogin() {
           localStorage.setItem("user", JSON.stringify(data.user));
 
           toast.success("✅ Logged in successfully!");
-          router.replace("/about");
+          router.replace("/");
         }
       } catch (err) {
         console.error("Polling error:", err);
