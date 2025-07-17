@@ -1,77 +1,30 @@
 "use client";
-
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "react-hot-toast";
 
 export default function TruecallerLogin() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // ✅ Send token+endpoint to backend & log response
-  const verifyWithBackend = async (payload) => {
-    console.log("✅ Sending payload to backend:", payload);
-    setLoading(true);
-
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/callback/`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const raw = await res.text(); // raw response
-      console.log("Backend raw response:", raw);
-
-      if (!res.ok) throw new Error(`Backend error: ${res.status}`);
-
-      const data = JSON.parse(raw);
-      console.log("Parsed backend response:", data);
-
-      // Save tokens
-      localStorage.setItem("access_token", data.access);
-      localStorage.setItem("refresh_token", data.refresh);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      toast.success("Logged in successfully!");
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      console.error(" Backend verification failed:", err);
-      toast.error("Backend verification failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Trigger Truecaller App
   const startPolling = (reqId) => {
-    console.log("✅ Starting polling for:", reqId);
+    console.log("✅ Polling for:", reqId);
 
     const poll = setInterval(async () => {
-      console.log("🔄 Polling backend /status...");
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/status/?requestId=${reqId}`
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/status/?requestId=${reqId}`);
       const data = await res.json();
 
       if (data?.verified) {
-        console.log("✅ Truecaller verified!", data);
         clearInterval(poll);
 
-        // Save JWTs
         localStorage.setItem("access_token", data.access);
         localStorage.setItem("refresh_token", data.refresh);
         localStorage.setItem("user", JSON.stringify(data.user));
 
         toast.success("✅ Logged in successfully!");
-        router.replace("/about"); // redirect after success
+        router.replace("/about");
       }
-    }, 2000); // poll every 2 sec
+    }, 2000);
   };
 
   const initiateVerification = () => {
