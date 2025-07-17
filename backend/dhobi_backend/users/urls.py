@@ -2,6 +2,7 @@ from django.urls import path
 from .views import RegisterView, CustomTokenObtainPairView, PingView, LogoutView
 from .views import FirebaseLoginView
 from .views import truecaller_callback
+from .views import truecaller_callback, truecaller_status
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -11,6 +12,5 @@ urlpatterns = [
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('firebase-auth/', FirebaseLoginView.as_view(), name='firebase_auth'),
     path('truecaller/callback/', truecaller_callback),
-
-
+    path("auth/truecaller/status/", truecaller_status),
 ]

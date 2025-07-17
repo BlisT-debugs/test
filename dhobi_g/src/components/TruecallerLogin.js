@@ -48,6 +48,29 @@ export default function TruecallerLogin() {
   };
 
   // Trigger Truecaller App
+  const startPolling = (requestId) => {
+  const interval = setInterval(async () => {
+    console.log("🔄 Polling backend for Truecaller status...");
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/status/?requestId=${requestId}`
+    );
+    const data = await res.json();
+
+    if (data.verified) {
+      console.log("Truecaller verified!", data);
+      clearInterval(interval);
+
+      localStorage.setItem("access_token", data.access);
+      localStorage.setItem("refresh_token", data.refresh);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      toast.success(" Logged in successfully!");
+      router.replace("/about"); // or /dashboard
+    }
+  }, 2000); // poll every 2 seconds
+};
+
   const initiateVerification = () => {
     setLoading(true);
 
@@ -104,6 +127,7 @@ export default function TruecallerLogin() {
       console.log("🔄 Fallback to DeepLink");
       window.location.href = deepLink;
     }, 1500);
+    startPolling(requestId);
   };
 
 

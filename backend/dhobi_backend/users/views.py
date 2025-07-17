@@ -1,3 +1,4 @@
+import os
 from django.shortcuts import render
 from rest_framework import generics, permissions
 from .models import User
@@ -131,103 +132,83 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from django.shortcuts import redirect
 from urllib.parse import urlencode
-
 from .models import User
 from .serializers import UserSerializer
+from django.core.cache import cache  
 
-
-@api_view(["POST"])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def truecaller_callback(request):
     print("✅ Truecaller callback hit")
     print("Request body:", request.data)
 
+    request_id = request.GET.get("requestId")  # ✅ extract from query param
     access_token = request.data.get("accessToken")
     endpoint = request.data.get("endpoint")
 
     if not access_token or not endpoint:
         return Response({"error": "Missing accessToken or endpoint"}, status=400)
 
-    try:
-        # ✅ Call Truecaller Profile API
-        headers = {"Authorization": f"Bearer {access_token}"}
-        profile_res = requests.get(endpoint, headers=headers, timeout=5)
+    # Fetch Truecaller profile
+    import requests
+    headers = {"Authorization": f"Bearer {access_token}"}
+    profile_resp = requests.get(endpoint, headers=headers)
 
-        if profile_res.status_code != 200:
-            return Response(
-                {"error": f"Failed to fetch Truecaller profile {profile_res.status_code}"},
-                status=400,
-            )
+    if profile_resp.status_code != 200:
+        return Response({"error": "Failed to fetch Truecaller profile"}, status=400)
 
-        profile = profile_res.json()
-        print("✅ Truecaller profile:", profile)
+    profile = profile_resp.json()
+    print("✅ Truecaller profile:", profile)
 
-        # ✅ Extract user fields safely
-        phone_numbers = profile.get("phoneNumbers", [])
-        phone_number = str(phone_numbers[0]) if phone_numbers else None
+    phone_number = str(profile.get("phoneNumbers", [])[0])
+    first_name = profile.get("name", {}).get("first", "User")
+    last_name = profile.get("name", {}).get("last", "")
+    email = profile.get("onlineIdentities", {}).get("email", f"{phone_number}@truecaller.com")
 
-        first_name = profile.get("name", {}).get("first", "User")
-        last_name = profile.get("name", {}).get("last", "")
-
-        email = (
-            profile.get("onlineIdentities", {}).get("email")
-            or f"{phone_number}@truecaller.com"
-        )
-
-        avatar_url = profile.get("avatarUrl", None)
-
-        if not phone_number:
-            return Response({"error": "Phone number missing in Truecaller profile"}, status=400)
-
-        # ✅ Ensure required address fields for model
-        DEFAULT_ADDRESS = {
-            "address_line1": "Auto-generated",
-            "city": "Unknown",
-            "state": "Unknown",
-            "postal_code": "000000",
-            "country": profile.get("addresses", [{}])[0].get("countryCode", "India"),
+    # Get/create user
+    user, created = User.objects.get_or_create(
+        phone_number=phone_number,
+        defaults={
+            "username": phone_number,
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "is_truecaller_verified": True,
         }
+    )
+    if not created and not user.is_truecaller_verified:
+        user.is_truecaller_verified = True
+        user.save()
 
-        # ✅ Find or create user
-        user, created = User.objects.get_or_create(
-            phone_number=phone_number,
-            defaults={
-                "username": phone_number,
-                "email": email,
-                "first_name": first_name,
-                "last_name": last_name,
-                "profile_picture": avatar_url,
-                "is_truecaller_verified": True,
-                **DEFAULT_ADDRESS,
+    refresh = RefreshToken.for_user(user)
+
+    # ✅ NEW: Store login result in cache using requestId
+    if request_id:
+        cache.set(
+            f"truecaller:{request_id}",
+            {
+                "verified": True,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": phone_number,
             },
+            timeout=120  # keep only 2 min
         )
+        return Response({"status": "ok"})  # just ACK
 
-        # ✅ If user existed, update verification & details if needed
-        if not created:
-            updated = False
-            if not user.is_truecaller_verified:
-                user.is_truecaller_verified = True
-                updated = True
-            if avatar_url and user.profile_picture != avatar_url:
-                user.profile_picture = avatar_url
-                updated = True
-            if updated:
-                user.save()
+    # ✅ fallback: direct redirect if no requestId
+    frontend_url = os.getenv("FRONTEND_URL", "https://your-frontend.vercel.app")
+    success_url = f"{frontend_url}/truecaller/callback/success?access={refresh.access_token}&refresh={refresh}&user={phone_number}"
+    return redirect(success_url)
 
-        # Issue JWT tokens
-        refresh = RefreshToken.for_user(user)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def truecaller_status(request):
+    request_id = request.GET.get("requestId")
+    if not request_id:
+        return Response({"error": "Missing requestId"}, status=400)
 
-        params = urlencode({
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-        "user": user.phone_number
-    })
-        frontend_redirect = f"https://test-phi-pink-55.vercel.app/truecaller/success?{params}"
-        return redirect(frontend_redirect)
-
-    except Exception as e:
-        print("Error fetching/processing Truecaller profile:", str(e))
-        return Response(
-            {"error": f"Truecaller profile fetch failed: {str(e)}"},
-            status=500,
-        )
+    data = cache.get(f"truecaller:{request_id}")
+    if data:
+        return Response(data)  # contains verified, access, refresh, user
+    return Response({"verified": False})
