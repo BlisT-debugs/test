@@ -22,7 +22,8 @@ export default function TruecallerSuccess() {
       localStorage.setItem("user", JSON.stringify({ phone: user }));
 
       // ✅ Redirect to dashboard/homepage
-      router.replace("/");
+      router.replace("/about");
+      console.log("✅ Redirecting to /about");
     } else {
       console.error("❌ Missing tokens in redirect URL");
       router.replace("/login");
