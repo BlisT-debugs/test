@@ -123,16 +123,18 @@ class FirebaseLoginView(APIView):
 
 
 # truecaller view
-import jwt
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
-
 import requests
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
 
-@api_view(['POST'])
+from .models import User
+from .serializers import UserSerializer
+
+
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def truecaller_callback(request):
     print("✅ Truecaller callback hit")
@@ -144,51 +146,86 @@ def truecaller_callback(request):
     if not access_token or not endpoint:
         return Response({"error": "Missing accessToken or endpoint"}, status=400)
 
-    # ✅ Call Truecaller Profile API
     try:
+        # ✅ Call Truecaller Profile API
         headers = {"Authorization": f"Bearer {access_token}"}
         profile_res = requests.get(endpoint, headers=headers, timeout=5)
 
         if profile_res.status_code != 200:
-            return Response({"error": f"Failed to fetch Truecaller profile {profile_res.status_code}"}, status=400)
+            return Response(
+                {"error": f"Failed to fetch Truecaller profile {profile_res.status_code}"},
+                status=400,
+            )
 
         profile = profile_res.json()
         print("✅ Truecaller profile:", profile)
 
-        # Extract fields
-        phone_number = profile.get("phoneNumber")
-        name = profile.get("name") or "User"
-        email = profile.get("email", f"{phone_number}@truecaller.com")
+        # ✅ Extract user fields safely
+        phone_numbers = profile.get("phoneNumbers", [])
+        phone_number = str(phone_numbers[0]) if phone_numbers else None
+
+        first_name = profile.get("name", {}).get("first", "User")
+        last_name = profile.get("name", {}).get("last", "")
+
+        email = (
+            profile.get("onlineIdentities", {}).get("email")
+            or f"{phone_number}@truecaller.com"
+        )
+
+        avatar_url = profile.get("avatarUrl", None)
 
         if not phone_number:
-            return Response({"error": "Phone number missing in profile"}, status=400)
+            return Response({"error": "Phone number missing in Truecaller profile"}, status=400)
 
-        # Find or create user
+        # ✅ Ensure required address fields for model
+        DEFAULT_ADDRESS = {
+            "address_line1": "Auto-generated",
+            "city": "Unknown",
+            "state": "Unknown",
+            "postal_code": "000000",
+            "country": profile.get("addresses", [{}])[0].get("countryCode", "India"),
+        }
+
+        # ✅ Find or create user
         user, created = User.objects.get_or_create(
             phone_number=phone_number,
             defaults={
                 "username": phone_number,
-                "first_name": name.split()[0],
-                "last_name": " ".join(name.split()[1:]),
                 "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "profile_picture": avatar_url,
                 "is_truecaller_verified": True,
+                **DEFAULT_ADDRESS,
             },
         )
 
-        # If existing user, ensure verified
-        if not created and not user.is_truecaller_verified:
-            user.is_truecaller_verified = True
-            user.save()
+        # ✅ If user existed, update verification & details if needed
+        if not created:
+            updated = False
+            if not user.is_truecaller_verified:
+                user.is_truecaller_verified = True
+                updated = True
+            if avatar_url and user.profile_picture != avatar_url:
+                user.profile_picture = avatar_url
+                updated = True
+            if updated:
+                user.save()
 
-        # Issue JWT
+        # ✅ Issue JWT tokens
         refresh = RefreshToken.for_user(user)
 
-        return Response({
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "user": UserSerializer(user).data
-        })
+        return Response(
+            {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": UserSerializer(user).data,
+            }
+        )
 
     except Exception as e:
-        print("❌ Error fetching Truecaller profile:", str(e))
-        return Response({"error": f"Truecaller profile fetch failed: {str(e)}"}, status=500)
+        print("❌ Error fetching/processing Truecaller profile:", str(e))
+        return Response(
+            {"error": f"Truecaller profile fetch failed: {str(e)}"},
+            status=500,
+        )
