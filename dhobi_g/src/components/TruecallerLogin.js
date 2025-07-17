@@ -7,22 +7,32 @@ export default function TruecallerLogin() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  // Poll backend until verification is complete
   const startPolling = (reqId) => {
     console.log("✅ Polling for:", reqId);
 
     const poll = setInterval(async () => {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/status/?requestId=${reqId}`);
-      const data = await res.json();
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/status/?requestId=${reqId}`
+        );
 
-      if (data?.verified) {
-        clearInterval(poll);
+        if (!res.ok) return; // wait until backend responds
+        const data = await res.json();
 
-        localStorage.setItem("access_token", data.access);
-        localStorage.setItem("refresh_token", data.refresh);
-        localStorage.setItem("user", JSON.stringify(data.user));
+        if (data?.verified) {
+          clearInterval(poll);
 
-        toast.success("✅ Logged in successfully!");
-        router.replace("/about");
+          // ✅ Save JWT tokens & user
+          localStorage.setItem("access_token", data.access);
+          localStorage.setItem("refresh_token", data.refresh);
+          localStorage.setItem("user", JSON.stringify(data.user));
+
+          toast.success("✅ Logged in successfully!");
+          router.replace("/about");
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
       }
     }, 2000);
   };
@@ -83,8 +93,8 @@ export default function TruecallerLogin() {
       console.log("🔄 Fallback to DeepLink");
       window.location.href = deepLink;
     }, 1500);
-    console.log(requestId);
-    startPolling(requestId);
+    console.log(requestNonce);
+    startPolling(requestNonce);
   };
 
 
