@@ -83,6 +83,7 @@ export default function TruecallerLogin() {
       console.log("🔄 Fallback to DeepLink");
       window.location.href = deepLink;
     }, 1500);
+    console.log(requestId);
     startPolling(requestId);
   };
 
