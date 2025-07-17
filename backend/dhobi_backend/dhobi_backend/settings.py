@@ -28,11 +28,11 @@ if FIREBASE_CRED_JSON:
     try:
         cred = credentials.Certificate(eval(FIREBASE_CRED_JSON))  # Parse JSON string
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase initialized from environment")
+        print("Firebase initialized from environment")
     except Exception as e:
-        print(f"❌ Firebase init error: {e}")
+        print(f"Firebase init error: {e}")
 else:
-    print("⚠️ No Firebase credentials found in environment!")
+    print("No Firebase credentials found in environment!")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -88,6 +88,8 @@ ROOT_URLCONF = 'dhobi_backend.urls'
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "content-type",
     "authorization",
+    "authorization",
+    "content-type",
 ]
 
 CORS_ALLOW_METHODS = [

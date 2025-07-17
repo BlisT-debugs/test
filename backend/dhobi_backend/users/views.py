@@ -136,70 +136,63 @@ from .models import User
 from .serializers import UserSerializer
 from django.core.cache import cache  
 
+from django.core.cache import cache
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def truecaller_callback(request):
     print("✅ Truecaller callback hit")
     print("Request body:", request.data)
 
-    request_id = request.GET.get("requestId")  # ✅ extract from query param
+    # ✅ Extract accessToken + endpoint from request
+    request_id = request.data.get("requestId")
     access_token = request.data.get("accessToken")
     endpoint = request.data.get("endpoint")
 
     if not access_token or not endpoint:
-        return Response({"error": "Missing accessToken or endpoint"}, status=400)
+        return Response({"error": "Missing accessToken/endpoint"}, status=400)
 
-    # Fetch Truecaller profile
+    # ✅ Fetch profile from Truecaller
     import requests
-    headers = {"Authorization": f"Bearer {access_token}"}
-    profile_resp = requests.get(endpoint, headers=headers)
-
-    if profile_resp.status_code != 200:
-        return Response({"error": "Failed to fetch Truecaller profile"}, status=400)
-
-    profile = profile_resp.json()
+    resp = requests.get(endpoint, headers={"Authorization": f"Bearer {access_token}"})
+    profile = resp.json()
     print("✅ Truecaller profile:", profile)
 
-    phone_number = str(profile.get("phoneNumbers", [])[0])
-    first_name = profile.get("name", {}).get("first", "User")
-    last_name = profile.get("name", {}).get("last", "")
-    email = profile.get("onlineIdentities", {}).get("email", f"{phone_number}@truecaller.com")
+    # ✅ Extract user info
+    phone = str(profile["phoneNumbers"][0])
+    first_name = profile["name"].get("first", "")
+    last_name = profile["name"].get("last", "")
+    email = profile.get("onlineIdentities", {}).get("email", f"{phone}@truecaller.com")
 
-    # Get/create user
+    # ✅ Get or create user
     user, created = User.objects.get_or_create(
-        phone_number=phone_number,
-        defaults={
-            "username": phone_number,
-            "email": email,
-            "first_name": first_name,
-            "last_name": last_name,
-            "is_truecaller_verified": True,
-        }
+        phone_number=phone,
+        defaults={"username": phone, "first_name": first_name, "last_name": last_name, "email": email}
     )
-    if not created and not user.is_truecaller_verified:
-        user.is_truecaller_verified = True
-        user.save()
 
+    # ✅ Issue JWT tokens
     refresh = RefreshToken.for_user(user)
+    access_jwt = str(refresh.access_token)
+    refresh_jwt = str(refresh)
 
-    # ✅ NEW: Store login result in cache using requestId
+    # ✅ Cache for polling
     if request_id:
         cache.set(
             f"truecaller:{request_id}",
             {
                 "verified": True,
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user": phone_number,
+                "access": access_jwt,
+                "refresh": refresh_jwt,
+                "user": UserSerializer(user).data
             },
-            timeout=120  # keep only 2 min
+            timeout=300  # 5 mins
         )
-        return Response({"status": "ok"})  # just ACK
 
-    # ✅ fallback: direct redirect if no requestId
-    frontend_url = os.getenv("FRONTEND_URL", "https://your-frontend.vercel.app")
-    success_url = f"{frontend_url}/truecaller/callback/success?access={refresh.access_token}&refresh={refresh}&user={phone_number}"
-    return redirect(success_url)
+    return Response({
+        "access": access_jwt,
+        "refresh": refresh_jwt,
+        "user": UserSerializer(user).data
+    })
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -212,3 +205,36 @@ def truecaller_status(request):
     if data:
         return Response(data)  # contains verified, access, refresh, user
     return Response({"verified": False})
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status as drf_status
+from django.core.cache import cache  # Use Django cache to store status
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def truecaller_status(request):
+    """
+    Polling endpoint to check if Truecaller verification finished.
+    Frontend calls: /api/auth/truecaller/status/?requestId=<id>
+    """
+    request_id = request.GET.get("requestId")
+    if not request_id:
+        return Response({"error": "Missing requestId"}, status=drf_status.HTTP_400_BAD_REQUEST)
+
+    # Read from cache
+    cached = cache.get(f"truecaller:{request_id}")
+    if not cached:
+        return Response({"verified": False}, status=200)
+
+    if cached.get("verified"):
+        return Response({
+            "verified": True,
+            "access": cached.get("access"),
+            "refresh": cached.get("refresh"),
+            "user": cached.get("user")
+        }, status=200)
+
+    return Response({"verified": False}, status=200)
+

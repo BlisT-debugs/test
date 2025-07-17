@@ -3,6 +3,7 @@ from .views import RegisterView, CustomTokenObtainPairView, PingView, LogoutView
 from .views import FirebaseLoginView
 from .views import truecaller_callback
 from .views import truecaller_callback, truecaller_status
+from .views import truecaller_status
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -13,4 +14,5 @@ urlpatterns = [
     path('firebase-auth/', FirebaseLoginView.as_view(), name='firebase_auth'),
     path('truecaller/callback/', truecaller_callback),
     path("auth/truecaller/status/", truecaller_status),
+    path("auth/truecaller/status/", truecaller_status, name="truecaller-status"),
 ]
