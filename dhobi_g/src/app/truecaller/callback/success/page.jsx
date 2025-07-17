@@ -7,29 +7,33 @@ export default function TruecallerSuccess() {
   const router = useRouter();
 
   useEffect(() => {
-    //Extract query params from URL
+    // ✅ Get query params from current URL
     const params = new URLSearchParams(window.location.search);
     const access = params.get("access");
     const refresh = params.get("refresh");
     const user = params.get("user");
 
-    console.log("Received tokens:", { access, refresh, user });
+    console.log("✅ Received from backend redirect:", { access, refresh, user });
 
     if (access && refresh && user) {
+      // ✅ Store tokens in localStorage
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);
-      localStorage.setItem("user", user);
+      localStorage.setItem("user", JSON.stringify({ phone: user }));
 
-      router.replace("/"); 
+      // ✅ Redirect to dashboard/homepage
+      router.replace("/");
     } else {
-      console.error("Missing tokens in redirect URL");
-      router.replace("/login"); // fallback if something went wrong
+      console.error("❌ Missing tokens in redirect URL");
+      router.replace("/login");
     }
   }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <h2 className="text-xl font-semibold"> Logging you in via Truecaller...</h2>
+      <h2 className="text-xl font-semibold">
+        ✅ Logging you in via Truecaller...
+      </h2>
     </div>
   );
 }

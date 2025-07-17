@@ -106,37 +106,7 @@ export default function TruecallerLogin() {
     }, 1500);
   };
 
-  //Listen for Truecaller postMessage
-  useEffect(() => {
-    const handleMessage = (event) => {
-      console.log("Truecaller postMessage event:", event);
 
-      // Truecaller sends accessToken + endpoint
-      try {
-        const parsed = JSON.parse(event.data);
-        console.log("Parsed event data:", parsed);
-
-        // We expect accessToken + endpoint
-        if (parsed?.accessToken && parsed?.endpoint) {
-          toast.success("Truecaller verified! Fetching profile...");
-          verifyWithBackend({
-            accessToken: parsed.accessToken,
-            endpoint: parsed.endpoint,
-          });
-        } else {
-          toast.error("No accessToken received from Truecaller");
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Failed to parse Truecaller response:", err);
-        toast.error("Invalid Truecaller response");
-        setLoading(false);
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
 
   return (
     <button
