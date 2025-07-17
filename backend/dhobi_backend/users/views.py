@@ -130,58 +130,65 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 
+import requests
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def truecaller_callback(request):
     print("✅ Truecaller callback hit")
     print("Request body:", request.data)
 
-    token = request.data.get('requestPayload')
-    if not token:
-        print("❌ Missing requestPayload")
-        return Response({'error': 'Missing Truecaller payload'}, status=400)
+    access_token = request.data.get("accessToken")
+    endpoint = request.data.get("endpoint")
 
+    if not access_token or not endpoint:
+        return Response({"error": "Missing accessToken or endpoint"}, status=400)
+
+    # ✅ Call Truecaller Profile API
     try:
-        decoded = jwt.decode(token, options={"verify_signature": False})
-        print("✅ Decoded payload:", decoded)
-    except Exception as e:
-        print("❌ JWT decode failed:", str(e))
-        return Response({'error': f'Invalid JWT: {str(e)}'}, status=400)
+        headers = {"Authorization": f"Bearer {access_token}"}
+        profile_res = requests.get(endpoint, headers=headers, timeout=5)
 
+        if profile_res.status_code != 200:
+            return Response({"error": f"Failed to fetch Truecaller profile {profile_res.status_code}"}, status=400)
 
+        profile = profile_res.json()
+        print("✅ Truecaller profile:", profile)
 
-    # Extract user details
-    phone_number = decoded.get('phoneNumber')
-    first_name = decoded.get('firstName') or decoded.get('name') or "User"
-    last_name = decoded.get('lastName', "")
-    email = decoded.get('email', f"{phone_number}@truecaller.com")
+        # Extract fields
+        phone_number = profile.get("phoneNumber")
+        name = profile.get("name") or "User"
+        email = profile.get("email", f"{phone_number}@truecaller.com")
 
-    if not phone_number:
-        return Response({'error': 'Phone number missing from Truecaller payload'}, status=status.HTTP_400_BAD_REQUEST)
+        if not phone_number:
+            return Response({"error": "Phone number missing in profile"}, status=400)
 
-    # Find existing user OR create new one
-    user, created = User.objects.get_or_create(
-        phone_number=phone_number,
-        defaults={
-            'username': phone_number,   # use phone as username
-            'email': email,
-            'first_name': first_name,
-            'last_name': last_name,
-            'is_truecaller_verified': True,  # mark verified
-        }
-    )
+        # Find or create user
+        user, created = User.objects.get_or_create(
+            phone_number=phone_number,
+            defaults={
+                "username": phone_number,
+                "first_name": name.split()[0],
+                "last_name": " ".join(name.split()[1:]),
+                "email": email,
+                "is_truecaller_verified": True,
+            },
+        )
 
-    # If user already existed, update verification flag if needed
-    if not created:
-        if not user.is_truecaller_verified:
+        # If existing user, ensure verified
+        if not created and not user.is_truecaller_verified:
             user.is_truecaller_verified = True
             user.save()
 
-    # ✅ Issue JWT tokens
-    refresh = RefreshToken.for_user(user)
+        # Issue JWT
+        refresh = RefreshToken.for_user(user)
 
-    return Response({
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
-        'user': UserSerializer(user).data
-    })
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": UserSerializer(user).data
+        })
+
+    except Exception as e:
+        print("❌ Error fetching Truecaller profile:", str(e))
+        return Response({"error": f"Truecaller profile fetch failed: {str(e)}"}, status=500)
