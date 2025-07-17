@@ -138,7 +138,7 @@ from .serializers import UserSerializer
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def truecaller_callback(request):
-    print("✅ Truecaller callback hit")
+    print("Truecaller callback hit")
     print("Request body:", request.data)
 
     request_id = request.data.get("requestId")
@@ -148,29 +148,29 @@ def truecaller_callback(request):
     if not access_token or not endpoint:
         return Response({"error": "Missing accessToken/endpoint"}, status=drf_status.HTTP_400_BAD_REQUEST)
 
-    # ✅ Fetch Truecaller profile
+    # Fetch Truecaller profile
     profile_resp = requests.get(endpoint, headers={"Authorization": f"Bearer {access_token}"})
     profile_data = profile_resp.json()
-    print("✅ Truecaller profile:", profile_data)
+    print("Truecaller profile:", profile_data)
 
-    # ✅ Extract user info
+    # Extract user info
     phone = str(profile_data["phoneNumbers"][0])
     first_name = profile_data["name"].get("first", "")
     last_name = profile_data["name"].get("last", "")
     email = profile_data.get("onlineIdentities", {}).get("email", f"{phone}@truecaller.com")
 
-    # ✅ Get or create user
+    # Get or create user
     user, created = User.objects.get_or_create(
         phone_number=phone,
         defaults={"username": phone, "first_name": first_name, "last_name": last_name, "email": email}
     )
 
-    # ✅ Issue JWT tokens
+    # Issue JWT tokens
     refresh = RefreshToken.for_user(user)
     access_jwt = str(refresh.access_token)
     refresh_jwt = str(refresh)
 
-    # ✅ Cache result for polling
+    # Cache result for polling
     if request_id:
         cache.set(
             f"truecaller:{request_id}",

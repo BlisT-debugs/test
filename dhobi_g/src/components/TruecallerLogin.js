@@ -9,7 +9,7 @@ export default function TruecallerLogin() {
 
   // Poll backend until verification is complete
   const startPolling = (reqId) => {
-    console.log("✅ Polling for:", reqId);
+    console.log("Polling for:", reqId);
 
     const poll = setInterval(async () => {
       try {
@@ -23,12 +23,12 @@ export default function TruecallerLogin() {
         if (data?.verified) {
           clearInterval(poll);
 
-          // ✅ Save JWT tokens & user
+          // Save JWT tokens & user
           localStorage.setItem("access_token", data.access);
           localStorage.setItem("refresh_token", data.refresh);
           localStorage.setItem("user", JSON.stringify(data.user));
 
-          toast.success("✅ Logged in successfully!");
+          toast.success("Logged in successfully!");
           router.replace("/");
         }
       } catch (err) {
@@ -86,11 +86,11 @@ export default function TruecallerLogin() {
       `&callbackUrl=${encodeURIComponent(callbackUrl)}` +
       `#Intent;scheme=truecallersdk;package=com.truecaller;end`;
 
-    console.log("🔄 Opening Truecaller Intent URL");
+    console.log("Opening Truecaller Intent URL");
     window.location.href = intentUrl;
 
     setTimeout(() => {
-      console.log("🔄 Fallback to DeepLink");
+      console.log("Fallback to DeepLink");
       window.location.href = deepLink;
     }, 1500);
     console.log(requestNonce);

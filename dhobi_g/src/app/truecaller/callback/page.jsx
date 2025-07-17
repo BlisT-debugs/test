@@ -37,7 +37,7 @@ export default function TruecallerCallback() {
           localStorage.setItem("user", JSON.stringify(result.user));
 
           toast.success("Logged in successfully!");
-          router.push("/dashboard");
+          router.push("/");
         } else {
           toast.error("Truecaller returned no payload");
           router.push("/login");
