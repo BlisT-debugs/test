@@ -129,6 +129,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
+from django.shortcuts import redirect
+from urllib.parse import urlencode
 
 from .models import User
 from .serializers import UserSerializer
@@ -212,19 +214,19 @@ def truecaller_callback(request):
             if updated:
                 user.save()
 
-        # ✅ Issue JWT tokens
+        # Issue JWT tokens
         refresh = RefreshToken.for_user(user)
 
-        return Response(
-            {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user": UserSerializer(user).data,
-            }
-        )
+        params = urlencode({
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "user": user.phone_number
+    })
+        frontend_redirect = f"https://test-phi-pink-55.vercel.app/truecaller/success?{params}"
+        return redirect(frontend_redirect)
 
     except Exception as e:
-        print("❌ Error fetching/processing Truecaller profile:", str(e))
+        print("Error fetching/processing Truecaller profile:", str(e))
         return Response(
             {"error": f"Truecaller profile fetch failed: {str(e)}"},
             status=500,
