@@ -48,28 +48,31 @@ export default function TruecallerLogin() {
   };
 
   // Trigger Truecaller App
-  const startPolling = (requestId) => {
-  const interval = setInterval(async () => {
-    console.log("🔄 Polling backend for Truecaller status...");
+  const startPolling = (reqId) => {
+    console.log("✅ Starting polling for:", reqId);
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/status/?requestId=${requestId}`
-    );
-    const data = await res.json();
+    const poll = setInterval(async () => {
+      console.log("🔄 Polling backend /status...");
 
-    if (data.verified) {
-      console.log("Truecaller verified!", data);
-      clearInterval(interval);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/truecaller/status/?requestId=${reqId}`
+      );
+      const data = await res.json();
 
-      localStorage.setItem("access_token", data.access);
-      localStorage.setItem("refresh_token", data.refresh);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      if (data?.verified) {
+        console.log("✅ Truecaller verified!", data);
+        clearInterval(poll);
 
-      toast.success(" Logged in successfully!");
-      router.replace("/about"); // or /dashboard
-    }
-  }, 2000); // poll every 2 seconds
-};
+        // Save JWTs
+        localStorage.setItem("access_token", data.access);
+        localStorage.setItem("refresh_token", data.refresh);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        toast.success("✅ Logged in successfully!");
+        router.replace("/about"); // redirect after success
+      }
+    }, 2000); // poll every 2 sec
+  };
 
   const initiateVerification = () => {
     setLoading(true);
