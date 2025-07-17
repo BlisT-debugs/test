@@ -92,14 +92,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     "content-type",
 ]
 
-CORS_ALLOW_METHODS = [
-    "DELETE",
-    "GET",
-    "OPTIONS",
-    "PATCH",
-    "POST",
-    "PUT",
-]
+CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS"]
 
 TEMPLATES = [
     {

@@ -125,44 +125,39 @@ class FirebaseLoginView(APIView):
 
 # truecaller view
 import requests
+from django.core.cache import cache
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import status
-from django.shortcuts import redirect
-from urllib.parse import urlencode
+from rest_framework import status as drf_status
 from .models import User
 from .serializers import UserSerializer
-from django.core.cache import cache  
 
-from django.core.cache import cache
 
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def truecaller_callback(request):
     print("✅ Truecaller callback hit")
     print("Request body:", request.data)
 
-    # ✅ Extract accessToken + endpoint from request
     request_id = request.data.get("requestId")
     access_token = request.data.get("accessToken")
     endpoint = request.data.get("endpoint")
 
     if not access_token or not endpoint:
-        return Response({"error": "Missing accessToken/endpoint"}, status=400)
+        return Response({"error": "Missing accessToken/endpoint"}, status=drf_status.HTTP_400_BAD_REQUEST)
 
-    # ✅ Fetch profile from Truecaller
-    import requests
-    resp = requests.get(endpoint, headers={"Authorization": f"Bearer {access_token}"})
-    profile = resp.json()
-    print("✅ Truecaller profile:", profile)
+    # ✅ Fetch Truecaller profile
+    profile_resp = requests.get(endpoint, headers={"Authorization": f"Bearer {access_token}"})
+    profile_data = profile_resp.json()
+    print("✅ Truecaller profile:", profile_data)
 
     # ✅ Extract user info
-    phone = str(profile["phoneNumbers"][0])
-    first_name = profile["name"].get("first", "")
-    last_name = profile["name"].get("last", "")
-    email = profile.get("onlineIdentities", {}).get("email", f"{phone}@truecaller.com")
+    phone = str(profile_data["phoneNumbers"][0])
+    first_name = profile_data["name"].get("first", "")
+    last_name = profile_data["name"].get("last", "")
+    email = profile_data.get("onlineIdentities", {}).get("email", f"{phone}@truecaller.com")
 
     # ✅ Get or create user
     user, created = User.objects.get_or_create(
@@ -175,7 +170,7 @@ def truecaller_callback(request):
     access_jwt = str(refresh.access_token)
     refresh_jwt = str(refresh)
 
-    # ✅ Cache for polling
+    # ✅ Cache result for polling
     if request_id:
         cache.set(
             f"truecaller:{request_id}",
@@ -185,7 +180,7 @@ def truecaller_callback(request):
                 "refresh": refresh_jwt,
                 "user": UserSerializer(user).data
             },
-            timeout=300  # 5 mins
+            timeout=300  # 5 min
         )
 
     return Response({
@@ -194,47 +189,26 @@ def truecaller_callback(request):
         "user": UserSerializer(user).data
     })
 
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def truecaller_status(request):
-    request_id = request.GET.get("requestId")
-    if not request_id:
-        return Response({"error": "Missing requestId"}, status=400)
-
-    data = cache.get(f"truecaller:{request_id}")
-    if data:
-        return Response(data)  # contains verified, access, refresh, user
-    return Response({"verified": False})
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status as drf_status
-from django.core.cache import cache  # Use Django cache to store status
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def truecaller_status(request):
     """
-    Polling endpoint to check if Truecaller verification finished.
-    Frontend calls: /api/auth/truecaller/status/?requestId=<id>
+    Frontend polls: /api/auth/truecaller/status/?requestId=<id>
+    Returns cached result if available, otherwise `verified: False`
     """
     request_id = request.GET.get("requestId")
     if not request_id:
         return Response({"error": "Missing requestId"}, status=drf_status.HTTP_400_BAD_REQUEST)
 
-    # Read from cache
     cached = cache.get(f"truecaller:{request_id}")
-    if not cached:
-        return Response({"verified": False}, status=200)
-
-    if cached.get("verified"):
+    if cached:
         return Response({
             "verified": True,
-            "access": cached.get("access"),
-            "refresh": cached.get("refresh"),
-            "user": cached.get("user")
-        }, status=200)
+            "access": cached["access"],
+            "refresh": cached["refresh"],
+            "user": cached["user"]
+        }, status=drf_status.HTTP_200_OK)
 
-    return Response({"verified": False}, status=200)
-
+    # Not verified yet → return 200 so frontend keeps polling
+    return Response({"verified": False}, status=drf_status.HTTP_200_OK)
